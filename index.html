@@ -437,7 +437,6 @@ function onRoomUpdate(room){
 }
 
 async function startGame(){
-  S.currentQ = 0; S.lastQ = 0;
   await fbUpdate(`rooms/${S.code}`, {status:'playing', currentQ:0});
 }
 
@@ -510,7 +509,7 @@ function showFeedback(idx, ok, pts){
   if(pts > 0){ const pe=document.getElementById('points-earned'); pe.textContent=`+${pts} pts`; pe.style.display='block'; }
 }
 
-// Solo el host llama a esto — escribe en Firebase y todos lo detectan via polling
+// Solo el host llama a esto
 async function scheduleNext(delay){
   setTimeout(async()=>{
     const next = S.currentQ + 1;
@@ -518,8 +517,8 @@ async function scheduleNext(delay){
       if(next >= S.totalQ){
         await fbUpdate(`rooms/${S.code}`, {status:'finished'});
       } else {
-        S.currentQ = next;
-        S.lastQ = next;
+        // NO actualizamos S.currentQ ni S.lastQ aquí
+        // El polling lo va a detectar y actualizar solo
         await fbUpdate(`rooms/${S.code}`, {currentQ: next});
       }
     } catch(e){ toast('Error avanzando pregunta'); }
