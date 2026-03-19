@@ -393,31 +393,45 @@ async function joinRoom(){
 function onRoomUpdate(room){
   if(!room) return;
   const players = room.players ? Object.entries(room.players).map(([id,p])=>({id,...p})) : [];
-  if(S.isHost){
+
+  // Actualizar lista de jugadores en sala de espera
+  if(document.getElementById('screen-waiting').classList.contains('active')){
     renderWaitingPlayers(players);
     if(players.length >= 2) document.getElementById('start-btn').style.display='block';
-  } else {
+  }
+  if(document.getElementById('screen-waiting-player').classList.contains('active')){
     renderOtherPlayers(players);
   }
+
   if(room.status === 'playing'){
-    S.questions = room.questions;
-    S.totalQ = room.totalQ;
-    S.totalTime = room.timePerQ;
-    const qIdx = room.currentQ || 0;
-    const enPregunta = document.getElementById('screen-question').classList.contains('active');
-    if(!enPregunta){
-      S.currentQ = qIdx; S.lastQ = qIdx; S.answered = false;
+    S.questions  = room.questions;
+    S.totalQ     = room.totalQ;
+    S.totalTime  = room.timePerQ;
+    const qIdx   = room.currentQ || 0;
+    const onQScreen = document.getElementById('screen-question').classList.contains('active');
+
+    if(!onQScreen){
+      // Primera vez que arranca el juego
+      S.currentQ = qIdx;
+      S.lastQ    = qIdx;
+      S.answered = false;
+      clearInterval(S.timer);
       showQuestion(players);
-    } else if(!S.isHost && qIdx !== S.lastQ){
-      S.currentQ = qIdx; S.lastQ = qIdx; S.answered = false;
+    } else if(qIdx !== S.lastQ){
+      // Nueva pregunta detectada (funciona para host y jugadores)
+      S.currentQ = qIdx;
+      S.lastQ    = qIdx;
+      S.answered = false;
       clearInterval(S.timer);
       showQuestion(players);
     } else {
       updateMiniScores(players);
     }
   }
+
   if(room.status === 'finished'){
-    clearInterval(S.timer); stopPolling();
+    clearInterval(S.timer);
+    stopPolling();
     showFinal(players.sort((a,b)=>b.score-a.score));
   }
 }
