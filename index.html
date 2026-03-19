@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Zeppelin Trivia</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Black+Ops+One&display=swap" rel="stylesheet">
+<style>
+  :root{--black:#0a0a0a;--dark:#111;--card:#1a1a1a;--orange:#ff6a00;--orange-dark:#cc4400;--gold:#f5c518;--gold-dark:#c9a000;--fire:#ff4500;--white:#f0f0f0;--gray:#555;--correct:#2ecc71;--wrong:#e74c3c;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--black);color:var(--white);font-family:'Oswald',sans-serif;min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 80%,rgba(255,106,0,.08) 0%,transparent 50%),radial-gradient(ellipse at 80% 20%,rgba(245,197,24,.04) 0%,transparent 50%);pointer-events:none;z-index:0;}
+  .screen{display:none;flex-direction:column;align-items:center;min-height:100vh;padding:20px 16px 60px;position:relative;z-index:1;}
+  .screen.active{display:flex;}
+  .home-title{font-family:'Black Ops One',cursive;font-size:clamp(2.4rem,9vw,3.8rem);color:var(--orange);text-align:center;line-height:1;text-shadow:0 0 30px rgba(255,106,0,.5),2px 2px 0 #000;letter-spacing:2px;margin-bottom:4px;}
+  .home-sub{font-family:'Bebas Neue',cursive;font-size:1rem;color:var(--gold);letter-spacing:4px;text-align:center;margin-bottom:28px;}
+  .divider{width:80%;height:2px;background:linear-gradient(90deg,transparent,var(--orange),transparent);margin:12px 0 24px;}
+  .label{font-family:'Bebas Neue',cursive;font-size:1rem;letter-spacing:3px;color:var(--orange);margin-bottom:6px;text-align:left;width:100%;max-width:340px;}
+  input[type=text],select{width:100%;max-width:340px;background:var(--card);border:1px solid #333;border-radius:4px;color:var(--white);font-family:'Oswald',sans-serif;font-size:1.1rem;padding:12px 16px;outline:none;margin-bottom:18px;-webkit-appearance:none;}
+  input[type=text]:focus,select:focus{border-color:var(--orange);}
+  input::placeholder{color:#444;}
+  .btn{width:100%;max-width:340px;padding:16px;border:none;border-radius:4px;font-family:'Bebas Neue',cursive;font-size:1.4rem;letter-spacing:3px;cursor:pointer;transition:all .15s;}
+  .btn-primary{background:linear-gradient(135deg,var(--orange-dark),var(--orange));color:#fff;box-shadow:0 4px 20px rgba(255,106,0,.4);}
+  .btn-primary:active{transform:scale(.97);}
+  .btn-gold{background:linear-gradient(135deg,var(--gold-dark),var(--gold));color:var(--black);box-shadow:0 4px 20px rgba(245,197,24,.3);margin-top:10px;}
+  .btn-outline{background:transparent;border:1px solid #444;color:#888;font-size:1rem;padding:12px;margin-top:8px;}
+  .screen-title{font-family:'Black Ops One',cursive;font-size:clamp(1.6rem,6vw,2.4rem);color:var(--orange);text-align:center;letter-spacing:2px;margin-bottom:4px;}
+  .screen-sub{font-family:'Bebas Neue',cursive;letter-spacing:4px;color:var(--gold);font-size:1rem;text-align:center;margin-bottom:20px;}
+  .waiting-box{background:var(--card);border:2px solid var(--orange-dark);border-radius:8px;padding:22px 20px;width:100%;max-width:340px;text-align:center;margin-bottom:20px;}
+  .room-code{font-family:'Black Ops One',cursive;font-size:3.8rem;color:var(--orange);letter-spacing:10px;text-shadow:0 0 20px rgba(255,106,0,.6);}
+  .room-label{font-family:'Bebas Neue',cursive;letter-spacing:4px;color:var(--gray);font-size:.85rem;margin-bottom:6px;}
+  .players-list{width:100%;max-width:340px;margin-bottom:18px;}
+  .players-title{font-family:'Bebas Neue',cursive;letter-spacing:3px;color:var(--gold);font-size:.95rem;margin-bottom:8px;}
+  .player-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card);border-radius:4px;margin-bottom:5px;border-left:3px solid var(--orange);}
+  .player-dot{width:8px;height:8px;background:var(--correct);border-radius:50%;flex-shrink:0;}
+  .player-name{font-size:1rem;font-weight:600;}
+  .host-badge{margin-left:auto;font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:.7rem;color:var(--orange);}
+  .q-header{width:100%;display:flex;justify-content:space-between;align-items:center;max-width:420px;margin-bottom:12px;}
+  .q-counter{font-family:'Bebas Neue',cursive;letter-spacing:3px;color:var(--gray);font-size:.95rem;}
+  .q-timer{font-family:'Black Ops One',cursive;font-size:2.2rem;color:var(--orange);min-width:48px;text-align:right;}
+  .q-timer.urgent{color:var(--fire);animation:pulse .5s infinite alternate;}
+  @keyframes pulse{from{opacity:1}to{opacity:.5}}
+  .progress-bar{width:100%;max-width:420px;height:4px;background:#222;border-radius:2px;margin-bottom:18px;overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--fire),var(--orange),var(--gold));transition:width 1s linear;}
+  .category-tag{font-family:'Bebas Neue',cursive;letter-spacing:3px;font-size:.8rem;color:var(--gold);margin-bottom:10px;text-align:center;}
+  .question-text{font-family:'Oswald',sans-serif;font-weight:700;font-size:clamp(1.05rem,4.2vw,1.35rem);color:var(--white);text-align:center;line-height:1.35;max-width:420px;margin-bottom:24px;min-height:72px;}
+  .options-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:420px;}
+  .option-btn{background:var(--card);border:2px solid #2a2a2a;border-radius:6px;color:var(--white);font-family:'Oswald',sans-serif;font-size:clamp(.82rem,3vw,1rem);font-weight:600;padding:16px 10px;cursor:pointer;text-align:center;line-height:1.3;min-height:72px;display:flex;align-items:center;justify-content:center;outline:none;-webkit-tap-highlight-color:transparent;user-select:none;}
+  .option-btn.correct{border-color:var(--correct)!important;background:rgba(46,204,113,.15)!important;color:var(--correct)!important;}
+  .option-btn.wrong{border-color:var(--wrong)!important;background:rgba(231,76,60,.15)!important;color:var(--wrong)!important;}
+  .option-btn.disabled{cursor:default;pointer-events:none;}
+  .feedback-msg{margin-top:18px;font-family:'Bebas Neue',cursive;font-size:1.6rem;letter-spacing:4px;text-align:center;min-height:38px;}
+  .feedback-msg.correct{color:var(--correct);}
+  .feedback-msg.wrong{color:var(--wrong);}
+  .points-earned{font-family:'Black Ops One',cursive;font-size:1.8rem;text-align:center;color:var(--gold);margin-top:6px;display:none;}
+  .mini-score-wrap{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:420px;margin-top:14px;}
+  .mini-score-chip{background:var(--card);border:1px solid #2a2a2a;border-radius:20px;padding:4px 12px;font-size:.82rem;display:flex;gap:6px;}
+  .chip-name{color:#bbb;}
+  .chip-pts{color:var(--orange);font-weight:700;}
+  .or-sep{font-family:'Bebas Neue',cursive;letter-spacing:4px;color:var(--gray);font-size:.85rem;text-align:center;margin:4px 0;}
+  .waiting-text{font-family:'Bebas Neue',cursive;letter-spacing:3px;color:var(--gray);font-size:.95rem;text-align:center;}
+  .dots::after{content:'';animation:dots 1.5s infinite;}
+  @keyframes dots{0%{content:''}33%{content:'.'}66%{content:'..'}100%{content:'...'}}
+  .scoreboard{width:100%;max-width:420px;margin-bottom:20px;}
+  .score-row{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--card);border-radius:6px;margin-bottom:7px;border-left:4px solid var(--gray);position:relative;overflow:hidden;}
+  .score-row.rank-1{border-left-color:var(--gold);}
+  .score-row.rank-2{border-left-color:#aaa;}
+  .score-row.rank-3{border-left-color:#cd7f32;}
+  .rank-num{font-family:'Black Ops One',cursive;font-size:1.3rem;color:var(--gray);min-width:28px;}
+  .score-row.rank-1 .rank-num{color:var(--gold);}
+  .score-row.rank-2 .rank-num{color:#aaa;}
+  .score-row.rank-3 .rank-num{color:#cd7f32;}
+  .score-name{font-size:1rem;font-weight:600;flex:1;}
+  .score-pts{font-family:'Bebas Neue',cursive;font-size:1.3rem;letter-spacing:2px;color:var(--orange);}
+  .score-bar{position:absolute;bottom:0;left:0;height:2px;background:linear-gradient(90deg,var(--fire),var(--orange));}
+  .winner-badge{font-size:3rem;text-align:center;margin-bottom:8px;animation:bounce .6s infinite alternate;}
+  @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-8px)}}
+  .setup-info{background:var(--card);border:1px solid #2a2a2a;border-radius:6px;padding:14px;width:100%;max-width:340px;margin-bottom:20px;}
+  .setup-info p{font-size:.85rem;color:#999;line-height:1.5;text-align:center;}
+  .setup-info strong{color:var(--orange);}
+  .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--correct);margin-right:6px;animation:pulse .5s infinite alternate;}
+  .powered{position:fixed;bottom:8px;left:0;right:0;text-align:center;font-family:'Bebas Neue',cursive;letter-spacing:3px;font-size:.65rem;color:#2a2a2a;z-index:1;}
+  #toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#222;border:1px solid var(--orange);color:var(--white);font-family:'Oswald',sans-serif;padding:10px 20px;border-radius:6px;font-size:.9rem;display:none;z-index:999;white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div style="margin-top:28px;font-size:3rem;">🎸</div>
+  <div class="home-title">TRIVIA</div>
+  <div style="font-family:'Black Ops One',cursive;font-size:1.1rem;color:var(--orange);letter-spacing:3px;margin-bottom:4px;">ZEPPELIN BAR</div>
+  <div class="home-sub">🎵 Música · Multijugador Real</div>
+  <div class="divider"></div>
+  <div style="font-family:'Bebas Neue',cursive;font-size:.8rem;letter-spacing:3px;color:var(--correct);margin-bottom:20px;"><span class="status-dot"></span>ONLINE</div>
+  <button class="btn btn-primary" id="btn-crear">🎤 CREAR SALA</button>
+  <div class="or-sep">— o —</div>
+  <button class="btn btn-gold" id="btn-unirse">🎵 UNIRSE A UNA SALA</button>
+</div>
+
+<!-- SETUP -->
+<div id="screen-setup" class="screen">
+  <div style="margin-top:20px;font-size:2.5rem;">🎸</div>
+  <div class="screen-title" style="font-size:1.7rem;margin-top:10px;">NUEVA SALA</div>
+  <div class="divider" style="margin-bottom:18px;"></div>
+  <div class="label">TU NOMBRE</div>
+  <input type="text" id="host-name" placeholder="Ej: Charly" maxlength="16">
+  <div class="label">CANTIDAD DE PREGUNTAS</div>
+  <select id="num-questions">
+    <option value="5">5 preguntas (rápida)</option>
+    <option value="10" selected>10 preguntas (normal)</option>
+    <option value="15">15 preguntas (larga)</option>
+    <option value="20">20 preguntas (épica)</option>
+  </select>
+  <div class="label">TIEMPO POR PREGUNTA</div>
+  <select id="time-per-q">
+    <option value="15">15 segundos</option>
+    <option value="20" selected>20 segundos</option>
+    <option value="30">30 segundos</option>
+  </select>
+  <div class="setup-info"><p>Compartí el <strong>código</strong> y todos se unen desde sus celulares.</p></div>
+  <button class="btn btn-primary" id="btn-crear-sala">🎸 CREAR SALA</button>
+  <button class="btn btn-outline" id="btn-volver-setup">← VOLVER</button>
+</div>
+
+<!-- JOIN -->
+<div id="screen-join" class="screen">
+  <div style="margin-top:40px;font-size:3.5rem;text-align:center;">🎵</div>
+  <div class="screen-title" style="margin-top:14px;">UNIRSE</div>
+  <div class="screen-sub">INGRESÁ EL CÓDIGO</div>
+  <div class="label">TU NOMBRE</div>
+  <input type="text" id="join-name" placeholder="Ej: Gustavo" maxlength="16">
+  <div class="label">CÓDIGO DE SALA</div>
+  <input type="text" id="join-code" placeholder="0000" maxlength="4" style="font-size:2rem;text-align:center;letter-spacing:10px;" inputmode="numeric">
+  <button class="btn btn-gold" id="btn-entrar" style="margin-top:6px;">🤘 ENTRAR</button>
+  <button class="btn btn-outline" id="btn-volver-join">← VOLVER</button>
+</div>
+
+<!-- WAITING HOST -->
+<div id="screen-waiting" class="screen">
+  <div style="margin-top:28px;font-size:2rem;">🎸</div>
+  <div class="screen-title" style="font-size:1.5rem;margin-top:10px;">SALA CREADA</div>
+  <div class="waiting-box" style="margin-top:14px;">
+    <div class="room-label">CÓDIGO DE SALA</div>
+    <div class="room-code" id="display-code">----</div>
+    <div style="font-size:.78rem;color:#555;margin-top:6px;font-family:'Oswald';">Compartí este código</div>
+  </div>
+  <div class="players-list">
+    <div class="players-title">JUGADORES <span id="player-count">0</span></div>
+    <div id="players-list-items"></div>
+  </div>
+  <div class="waiting-text dots" id="waiting-msg">Esperando jugadores</div>
+  <button class="btn btn-primary" id="start-btn" style="margin-top:18px;display:none;">🎸 COMENZAR</button>
+  <button class="btn btn-outline" id="btn-cancelar" style="margin-top:8px;">CANCELAR</button>
+</div>
+
+<!-- WAITING PLAYER -->
+<div id="screen-waiting-player" class="screen">
+  <div style="margin-top:60px;font-size:4rem;text-align:center;">🎸</div>
+  <div class="screen-title" style="margin-top:14px;">CONECTADO</div>
+  <div class="screen-sub" id="player-wait-name">—</div>
+  <div class="waiting-text dots" style="margin-top:10px;">Esperando que el anfitrión inicie</div>
+  <div class="players-list" style="margin-top:26px;">
+    <div class="players-title">EN LA SALA</div>
+    <div id="other-players-list"></div>
+  </div>
+</div>
+
+<!-- QUESTION -->
+<div id="screen-question" class="screen">
+  <div class="q-header" style="margin-top:18px;">
+    <div class="q-counter" id="q-counter">1 / 10</div>
+    <div class="q-timer" id="q-timer">20</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <div class="category-tag" id="q-category">🎸 ROCK</div>
+  <div class="question-text" id="q-text">Pregunta...</div>
+  <div class="options-grid" id="options-grid"></div>
+  <div class="feedback-msg" id="feedback-msg"></div>
+  <div class="points-earned" id="points-earned"></div>
+  <div class="mini-score-wrap" id="mini-scores"></div>
+</div>
+
+<!-- FINAL -->
+<div id="screen-final" class="screen">
+  <div class="winner-badge" style="margin-top:28px;">🏆</div>
+  <div class="screen-title">RESULTADO FINAL</div>
+  <div class="screen-sub" id="winner-name">EL GANADOR</div>
+  <div class="divider"></div>
+  <div class="scoreboard" id="final-scoreboard"></div>
+  <button class="btn btn-primary" id="btn-nueva-partida">🔄 NUEVA PARTIDA</button>
+</div>
+
+<div id="toast"></div>
+<div class="powered">ZEPPELIN BAR © TRIVIA</div>
+
+<script>
+const FB_URL = "https://zeppelin-trivia-default-rtdb.firebaseio.com";
+
+async function fbGet(path){
+  const r = await fetch(`${FB_URL}/${path}.json`);
+  return r.json();
+}
+async function fbSet(path, data){
+  await fetch(`${FB_URL}/${path}.json`, {method:'PUT', body:JSON.stringify(data), headers:{'Content-Type':'application/json'}});
+}
+async function fbUpdate(path, data){
+  await fetch(`${FB_URL}/${path}.json`, {method:'PATCH', body:JSON.stringify(data), headers:{'Content-Type':'application/json'}});
+}
+async function fbDelete(path){
+  await fetch(`${FB_URL}/${path}.json`, {method:'DELETE'});
+}
+
+let pollTimer = null;
+function startPolling(path, cb, interval=1500){
+  stopPolling();
+  const loop = async () => {
+    try { const d = await fbGet(path); cb(d); } catch(e){}
+    pollTimer = setTimeout(loop, interval);
+  };
+  loop();
+}
+function stopPolling(){
+  if(pollTimer){ clearTimeout(pollTimer); pollTimer = null; }
+}
+
+// ============================================================
+// PREGUNTAS
+// ============================================================
+const ALL_Q = [
+  {q:"¿En qué año se disolvió Soda Stereo por primera vez?",opts:["1997","1995","1993","1999"],a:0,cat:"SODA STEREO",diff:"easy"},
+  {q:"¿Quién era el vocalista de Soda Stereo?",opts:["Gustavo Cerati","Charly Alberti","Zeta Bosio","Daniel Melero"],a:0,cat:"SODA STEREO",diff:"easy"},
+  {q:"¿Cuál es el tema más conocido de Soda Stereo?",opts:["De Música Ligera","Persiana Americana","Zoom","Trátame Suavemente"],a:0,cat:"SODA STEREO",diff:"easy"},
+  {q:"¿En qué año fue el regreso de Soda Stereo 'Me Verás Volver'?",opts:["2007","2010","2005","2012"],a:0,cat:"SODA STEREO",diff:"medium"},
+  {q:"¿En qué año murió Gustavo Cerati?",opts:["2014","2012","2016","2010"],a:0,cat:"CERATI",diff:"easy"},
+  {q:"¿Con qué banda comenzó su carrera Charly García?",opts:["Sui Generis","Serú Girán","La Máquina","Los Gatos"],a:0,cat:"CHARLY GARCÍA",diff:"easy"},
+  {q:"¿Cuál es el apodo de Charly García?",opts:["El Genio","El Flaco","El Indio","El Carpo"],a:0,cat:"CHARLY GARCÍA",diff:"easy"},
+  {q:"¿Con quién formó Charly García la banda Serú Girán?",opts:["David Lebón","Fito Páez","Spinetta","Pappo"],a:0,cat:"CHARLY GARCÍA",diff:"medium"},
+  {q:"¿Cuál es el nombre completo de Los Redondos?",opts:["Patricio Rey y sus Redonditos de Ricota","Los Redonditos de Ricota","El Rey Patricio","Patricio Rey"],a:0,cat:"LOS REDONDOS",diff:"easy"},
+  {q:"¿En qué ciudad se formaron Los Redondos?",opts:["La Plata","Buenos Aires","Mar del Plata","Rosario"],a:0,cat:"LOS REDONDOS",diff:"medium"},
+  {q:"¿Quién es el guitarrista de Divididos?",opts:["Ricardo Mollo","Diego Arnedo","Juan Rodríguez","Alejandro Medina"],a:0,cat:"DIVIDIDOS",diff:"easy"},
+  {q:"¿De qué banda surgieron los integrantes de Divididos?",opts:["Sumo","Los Redondos","Soda Stereo","Virus"],a:0,cat:"DIVIDIDOS",diff:"easy"},
+  {q:"¿De dónde era Luca Prodan, vocalista de Sumo?",opts:["Italia","Inglaterra","Argentina","España"],a:0,cat:"SUMO",diff:"medium"},
+  {q:"¿Cuál es el hit más icónico de Sumo?",opts:["Mejor no hablar de ciertas cosas","Mañana en el Abasto","La Rubia Tarada","Cuando sea grande"],a:0,cat:"SUMO",diff:"easy"},
+  {q:"¿Cómo se llama el vocalista de La Renga?",opts:["El Chizzo","El Indio","Mollo","Gustavo"],a:0,cat:"LA RENGA",diff:"easy"},
+  {q:"¿De qué ciudad argentina es Fito Páez?",opts:["Rosario","Buenos Aires","Mendoza","Córdoba"],a:0,cat:"FITO PÁEZ",diff:"easy"},
+  {q:"¿Cuál es el álbum más famoso de Fito Páez?",opts:["El Amor Después del Amor","La La La","Ciudad de Pobres Corazones","Tercer Mundo"],a:0,cat:"FITO PÁEZ",diff:"easy"},
+  {q:"¿Cuál fue la primera banda de Spinetta?",opts:["Almendra","Pescado Rabioso","Invisible","Los Socios del Desierto"],a:0,cat:"SPINETTA",diff:"medium"},
+  {q:"¿En qué año murió Luis Alberto Spinetta?",opts:["2012","2010","2014","2008"],a:0,cat:"SPINETTA",diff:"easy"},
+  {q:"¿Cuál es la canción más famosa de León Gieco?",opts:["Solo le pido a Dios","El ángel de la bicicleta","Cinco siglos igual","De igual a igual"],a:0,cat:"LÉON GIECO",diff:"easy"},
+  {q:"¿Cuál es el nombre real de Pappo?",opts:["Norberto Napolitano","Carlos Pappo","Alberto Napolitano","Norberto García"],a:0,cat:"PAPPO",diff:"medium"},
+  {q:"¿En qué año se formó Led Zeppelin?",opts:["1968","1965","1970","1972"],a:0,cat:"LED ZEPPELIN",diff:"medium"},
+  {q:"¿Quién era el vocalista de Led Zeppelin?",opts:["Robert Plant","Jimmy Page","John Bonham","John Paul Jones"],a:0,cat:"LED ZEPPELIN",diff:"easy"},
+  {q:"¿Cómo se llama la canción más famosa de Led Zeppelin?",opts:["Stairway to Heaven","Whole Lotta Love","Kashmir","Black Dog"],a:0,cat:"LED ZEPPELIN",diff:"easy"},
+  {q:"¿En qué ciudad se formaron The Beatles?",opts:["Liverpool","Londres","Manchester","Birmingham"],a:0,cat:"THE BEATLES",diff:"easy"},
+  {q:"¿En qué año se separaron The Beatles?",opts:["1970","1968","1972","1966"],a:0,cat:"THE BEATLES",diff:"easy"},
+  {q:"¿Quién fue asesinado de The Beatles en 1980?",opts:["John Lennon","Paul McCartney","George Harrison","Ringo Starr"],a:0,cat:"THE BEATLES",diff:"easy"},
+  {q:"¿Quién es el vocalista de The Rolling Stones?",opts:["Mick Jagger","Keith Richards","Charlie Watts","Ron Wood"],a:0,cat:"ROLLING STONES",diff:"easy"},
+  {q:"¿Cuál es la canción más icónica de los Rolling Stones?",opts:["(I Can't Get No) Satisfaction","Paint It Black","Sympathy for the Devil","Start Me Up"],a:0,cat:"ROLLING STONES",diff:"easy"},
+  {q:"¿Quién era el vocalista de Queen?",opts:["Freddie Mercury","Brian May","Roger Taylor","John Deacon"],a:0,cat:"QUEEN",diff:"easy"},
+  {q:"¿En qué año murió Freddie Mercury?",opts:["1991","1993","1989","1995"],a:0,cat:"QUEEN",diff:"easy"},
+  {q:"¿Qué álbum de Queen contiene 'Bohemian Rhapsody'?",opts:["A Night at the Opera","Sheer Heart Attack","News of the World","Jazz"],a:0,cat:"QUEEN",diff:"medium"},
+  {q:"¿Cuál es el álbum más vendido de Pink Floyd?",opts:["The Dark Side of the Moon","The Wall","Wish You Were Here","Animals"],a:0,cat:"PINK FLOYD",diff:"easy"},
+  {q:"¿Quién era el vocalista de Nirvana?",opts:["Kurt Cobain","Dave Grohl","Krist Novoselic","Pat Smear"],a:0,cat:"NIRVANA",diff:"easy"},
+  {q:"¿En qué año murió Kurt Cobain?",opts:["1994","1992","1996","1990"],a:0,cat:"NIRVANA",diff:"easy"},
+  {q:"¿Qué banda formó Dave Grohl después de Nirvana?",opts:["Foo Fighters","Queens of the Stone Age","Them Crooked Vultures","Tenacious D"],a:0,cat:"NIRVANA",diff:"easy"},
+  {q:"¿Quién era el vocalista de The Doors?",opts:["Jim Morrison","Ray Manzarek","Robby Krieger","John Densmore"],a:0,cat:"THE DOORS",diff:"easy"},
+  {q:"¿En qué año murió Jim Morrison?",opts:["1971","1969","1973","1967"],a:0,cat:"THE DOORS",diff:"easy"},
+  {q:"¿Quién es el vocalista de Guns N' Roses?",opts:["Axl Rose","Slash","Duff McKagan","Izzy Stradlin"],a:0,cat:"GUNS N' ROSES",diff:"easy"},
+  {q:"¿Cuál fue el álbum debut de Guns N' Roses?",opts:["Appetite for Destruction","Use Your Illusion I","GN'R Lies","Chinese Democracy"],a:0,cat:"GUNS N' ROSES",diff:"easy"},
+  {q:"¿De qué país es la banda AC/DC?",opts:["Australia","Estados Unidos","Inglaterra","Escocia"],a:0,cat:"AC/DC",diff:"easy"},
+  {q:"¿Cuál es el álbum más vendido de AC/DC?",opts:["Back in Black","Highway to Hell","For Those About to Rock","Powerage"],a:0,cat:"AC/DC",diff:"easy"},
+  {q:"¿Cómo se llama el guitarrista icónico de AC/DC?",opts:["Angus Young","Malcolm Young","Cliff Williams","Simon Wright"],a:0,cat:"AC/DC",diff:"easy"},
+  {q:"¿Cuál es el álbum más vendido de Metallica?",opts:["Metallica (Black Album)","Master of Puppets","...And Justice for All","Ride the Lightning"],a:0,cat:"METALLICA",diff:"easy"},
+  {q:"¿Quién es el vocalista de Metallica?",opts:["James Hetfield","Lars Ulrich","Kirk Hammett","Robert Trujillo"],a:0,cat:"METALLICA",diff:"easy"},
+  {q:"¿Cuál es el álter ego más famoso de David Bowie?",opts:["Ziggy Stardust","Aladdin Sane","The Thin White Duke","Major Tom"],a:0,cat:"DAVID BOWIE",diff:"easy"},
+  {q:"¿En qué año murió David Bowie?",opts:["2016","2014","2018","2012"],a:0,cat:"DAVID BOWIE",diff:"easy"},
+  {q:"¿En qué año murió Jimi Hendrix?",opts:["1970","1968","1972","1966"],a:0,cat:"JIMI HENDRIX",diff:"easy"},
+  {q:"¿De qué país es la banda U2?",opts:["Irlanda","Inglaterra","Escocia","Australia"],a:0,cat:"U2",diff:"easy"},
+  {q:"¿Cuál es el vocalista de U2?",opts:["Bono","The Edge","Adam Clayton","Larry Mullen Jr."],a:0,cat:"U2",diff:"easy"},
+  {q:"¿Cuál es el riff más famoso de Deep Purple?",opts:["Smoke on the Water","Highway Star","Space Truckin","Child in Time"],a:0,cat:"DEEP PURPLE",diff:"easy"},
+  {q:"¿Quién era el vocalista original de Black Sabbath?",opts:["Ozzy Osbourne","Dio","Tony Martin","Glenn Hughes"],a:0,cat:"BLACK SABBATH",diff:"easy"},
+  {q:"¿Con qué movimiento musical se asocia The Clash?",opts:["Punk","Grunge","Heavy Metal","New Wave"],a:0,cat:"THE CLASH",diff:"easy"},
+  {q:"¿Quién es el vocalista de Aerosmith?",opts:["Steven Tyler","Joe Perry","Brad Whitford","Tom Hamilton"],a:0,cat:"AEROSMITH",diff:"easy"},
+  {q:"¿Cuál es el hit más famoso de Bon Jovi?",opts:["Livin' on a Prayer","You Give Love a Bad Name","Wanted Dead or Alive","Bad Medicine"],a:0,cat:"BON JOVI",diff:"easy"},
+  {q:"¿Cuál es el apodo de Bruce Springsteen?",opts:["The Boss","The King","The Chief","The Man"],a:0,cat:"SPRINGSTEEN",diff:"easy"},
+  {q:"¿De qué país es Radiohead?",opts:["Inglaterra","Estados Unidos","Irlanda","Australia"],a:0,cat:"RADIOHEAD",diff:"easy"},
+  {q:"¿Quién es el vocalista de Radiohead?",opts:["Thom Yorke","Jonny Greenwood","Colin Greenwood","Ed O'Brien"],a:0,cat:"RADIOHEAD",diff:"easy"},
+  {q:"¿De qué ciudad inglesa es Oasis?",opts:["Manchester","Liverpool","Londres","Birmingham"],a:0,cat:"OASIS",diff:"easy"},
+  {q:"¿Cuál es la canción más icónica de Oasis?",opts:["Wonderwall","Champagne Supernova","Don't Look Back in Anger","Live Forever"],a:0,cat:"OASIS",diff:"easy"},
+  {q:"¿Cómo se llaman los hermanos que lideraban Oasis?",opts:["Liam y Noel Gallagher","Liam y Damon Gallagher","Noel y Damon Gallagher","Liam y Paul Gallagher"],a:0,cat:"OASIS",diff:"easy"},
+  {q:"¿Quién es el vocalista de Red Hot Chili Peppers?",opts:["Anthony Kiedis","Flea","Chad Smith","John Frusciante"],a:0,cat:"RHCP",diff:"easy"},
+  {q:"¿Cómo se llama el bajista de Red Hot Chili Peppers?",opts:["Flea","Chad Smith","Anthony Kiedis","John Frusciante"],a:0,cat:"RHCP",diff:"easy"},
+  {q:"¿Quién era el vocalista de Soundgarden?",opts:["Chris Cornell","Eddie Vedder","Kurt Cobain","Layne Staley"],a:0,cat:"SOUNDGARDEN",diff:"easy"},
+  {q:"¿Qué festival se realizó en 1969 y es símbolo del rock?",opts:["Woodstock","Glastonbury","Coachella","Lollapalooza"],a:0,cat:"HISTORIA ROCK",diff:"easy"},
+  {q:"¿Quién es conocido como 'El Rey del Rock'?",opts:["Elvis Presley","Chuck Berry","Little Richard","Jerry Lee Lewis"],a:0,cat:"HISTORIA ROCK",diff:"easy"},
+  {q:"¿Qué banda tiene como logo la famosa lengua roja?",opts:["The Rolling Stones","AC/DC","Kiss","Aerosmith"],a:0,cat:"ROCK CLÁSICO",diff:"easy"},
+  {q:"¿Qué banda tiene el hit 'Smells Like Teen Spirit'?",opts:["Nirvana","Pearl Jam","Soundgarden","Alice in Chains"],a:0,cat:"GRUNGE",diff:"easy"},
+  {q:"¿De qué ciudad es el movimiento grunge?",opts:["Seattle","Los Angeles","New York","Chicago"],a:0,cat:"GRUNGE",diff:"easy"},
+  {q:"¿Quién es el vocalista de Pearl Jam?",opts:["Eddie Vedder","Chris Cornell","Layne Staley","Scott Weiland"],a:0,cat:"GRUNGE",diff:"easy"},
+  {q:"¿Cuál es la balada más famosa de Guns N' Roses?",opts:["November Rain","Sweet Child O' Mine","Patience","Don't Cry"],a:0,cat:"GUNS N' ROSES",diff:"medium"},
+  {q:"¿Cuál es el nombre real de Freddie Mercury?",opts:["Farrokh Bulsara","Frederick Mercury","Farrokh Queen","Frederick Bulsara"],a:0,cat:"QUEEN",diff:"hard"},
+  {q:"¿En qué año se formaron The Rolling Stones?",opts:["1962","1960","1964","1966"],a:0,cat:"ROLLING STONES",diff:"medium"},
+  {q:"¿Cuál es el hit más conocido de Dire Straits?",opts:["Money for Nothing","Sultans of Swing","Romeo and Juliet","Walk of Life"],a:0,cat:"DIRE STRAITS",diff:"easy"},
+  {q:"¿Cuál es el álbum más vendido de Fleetwood Mac?",opts:["Rumours","Tusk","Mirage","Tango in the Night"],a:0,cat:"FLEETWOOD MAC",diff:"easy"},
+  {q:"¿En qué década surgió el rock and roll?",opts:["1950s","1940s","1960s","1970s"],a:0,cat:"HISTORIA ROCK",diff:"easy"},
+  {q:"¿Quiénes conformaron el 'Club de los 27'?",opts:["Músicos que murieron a los 27 años","Una banda de jazz","Un club de fans de Beatles","Un sello discográfico"],a:0,cat:"HISTORIA ROCK",diff:"medium"},
+  {q:"¿Quién toca la guitarra en Queen?",opts:["Brian May","John Deacon","Roger Taylor","Freddie Mercury"],a:0,cat:"QUEEN",diff:"easy"},
+  {q:"¿Cuál es el género principal de Los Pericos?",opts:["Reggae","Blues","Punk","Metal"],a:0,cat:"LOS PERICOS",diff:"easy"},
+  {q:"¿Quién es el vocalista de Bersuit Vergarabat?",opts:["Gustavo Cordera","Marcelo Cordera","Diego Cordera","Pablo Cordera"],a:0,cat:"BERSUIT",diff:"easy"},
+  {q:"¿Quién era el vocalista de la banda Virus?",opts:["Federico Moura","Marcelo Moura","Jorge Moura","Diego Moura"],a:0,cat:"VIRUS",diff:"medium"},
+  {q:"¿Cuál es el hit más conocido de Van Halen?",opts:["Jump","Eruption","Running with the Devil","Panama"],a:0,cat:"VAN HALEN",diff:"easy"},
+  {q:"¿Quién es el vocalista de Sex Pistols?",opts:["Johnny Rotten","Sid Vicious","Steve Jones","Paul Cook"],a:0,cat:"SEX PISTOLS",diff:"easy"},
+  {q:"¿Cuál es el hit más conocido de Kiss?",opts:["Rock and Roll All Nite","Detroit Rock City","I Was Made for Lovin' You","Beth"],a:0,cat:"KISS",diff:"easy"},
+  {q:"¿Cuál es la canción más icónica de The Who?",opts:["My Generation","Baba O'Riley","Won't Get Fooled Again","Pinball Wizard"],a:0,cat:"THE WHO",diff:"easy"},
+  {q:"¿Qué banda argentina tiene el hit 'La Balada del Diablo y la Muerte'?",opts:["Los Piojos","Divididos","Los Redondos","Rata Blanca"],a:0,cat:"ROCK ARG.",diff:"easy"},
+  {q:"¿Cuál es el vocalista de Los Piojos?",opts:["Andrés Ciro Martínez","Miguel Cantilo","Pappo","Fito Páez"],a:0,cat:"ROCK ARG.",diff:"easy"},
+  {q:"¿Andrés Calamaro es de qué país?",opts:["Argentina","España","Uruguay","Chile"],a:0,cat:"ROCK ARG.",diff:"easy"},
+  {q:"¿Cuál es el álbum más famoso de Andrés Calamaro?",opts:["Alta Suciedad","El Salmón","Honestidad Brutal","Bohemio"],a:0,cat:"ROCK ARG.",diff:"medium"},
+  {q:"¿Cuántas cuerdas tiene una guitarra eléctrica estándar?",opts:["6","4","7","8"],a:0,cat:"MÚSICA",diff:"easy"},
+  {q:"¿Qué músico es considerado el padre del rock and roll?",opts:["Chuck Berry","Elvis Presley","Little Richard","Buddy Holly"],a:0,cat:"HISTORIA ROCK",diff:"medium"},
+  {q:"¿A quién está dedicado 'Wish You Were Here' de Pink Floyd?",opts:["Syd Barrett","John Lennon","Jim Morrison","Jimi Hendrix"],a:0,cat:"PINK FLOYD",diff:"medium"},
+  {q:"¿En qué año se separó Led Zeppelin?",opts:["1980","1982","1978","1984"],a:0,cat:"LED ZEPPELIN",diff:"medium"},
+  {q:"¿Cuál fue el primer álbum de Nirvana?",opts:["Bleach","Nevermind","In Utero","Incesticide"],a:0,cat:"NIRVANA",diff:"medium"},
+  {q:"¿Cuál es el álbum de Queen con 'We Will Rock You'?",opts:["News of the World","A Night at the Opera","Jazz","The Game"],a:0,cat:"QUEEN",diff:"medium"},
+  {q:"¿Cuál es el grupo argentino conocido como 'los Rolling Stones argentinos'?",opts:["Ratones Paranoicos","Los Pericos","Attaque 77","Los Piojos"],a:0,cat:"ROCK ARG.",diff:"medium"},
+];
+
+function pickQ(n){ return [...ALL_Q].sort(()=>Math.random()-.5).slice(0,Math.min(n,ALL_Q.length)); }
+function genCode(){ return Math.floor(1000+Math.random()*9000).toString(); }
+function genId(){ return Math.random().toString(36).substr(2,8); }
+
+const S = {
+  code:null, myId:null, myName:null, isHost:false,
+  questions:[], currentQ:0, totalQ:10, totalTime:20,
+  timeLeft:20, timer:null, answered:false, correctIdx:0, lastQ:-1
+};
+
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function toast(msg, ms=3000){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',ms); }
+
+document.getElementById('btn-crear').onclick       = () => showScreen('screen-setup');
+document.getElementById('btn-unirse').onclick      = () => showScreen('screen-join');
+document.getElementById('btn-volver-setup').onclick= () => showScreen('screen-home');
+document.getElementById('btn-volver-join').onclick = () => showScreen('screen-home');
+document.getElementById('btn-crear-sala').onclick  = createRoom;
+document.getElementById('btn-entrar').onclick      = joinRoom;
+document.getElementById('start-btn').onclick       = startGame;
+document.getElementById('btn-cancelar').onclick    = cancelRoom;
+document.getElementById('btn-nueva-partida').onclick = resetGame;
+
+async function createRoom(){
+  const name = document.getElementById('host-name').value.trim();
+  if(!name){ toast('Ingresá tu nombre'); return; }
+  S.myId = genId(); S.myName = name; S.isHost = true;
+  S.code = genCode();
+  S.totalQ = parseInt(document.getElementById('num-questions').value);
+  S.totalTime = parseInt(document.getElementById('time-per-q').value);
+  S.questions = pickQ(S.totalQ);
+  S.currentQ = 0;
+  const room = {
+    status:'waiting', totalQ:S.totalQ, timePerQ:S.totalTime,
+    questions:S.questions, currentQ:0,
+    players:{ [S.myId]:{name, score:0, isHost:true} }
+  };
+  try {
+    await fbSet(`rooms/${S.code}`, room);
+    document.getElementById('display-code').textContent = S.code;
+    showScreen('screen-waiting');
+    startPolling(`rooms/${S.code}`, onRoomUpdate, 1500);
+  } catch(e){ toast('Error al crear sala: ' + e.message); }
+}
+
+async function joinRoom(){
+  const name = document.getElementById('join-name').value.trim();
+  const code = document.getElementById('join-code').value.trim();
+  if(!name){ toast('Ingresá tu nombre'); return; }
+  if(code.length !== 4){ toast('El código tiene 4 dígitos'); return; }
+  try {
+    const room = await fbGet(`rooms/${code}`);
+    if(!room){ toast('Sala no encontrada'); return; }
+    if(room.status !== 'waiting'){ toast('El juego ya comenzó'); return; }
+    S.myId = genId(); S.myName = name; S.isHost = false; S.code = code;
+    S.totalQ = room.totalQ; S.totalTime = room.timePerQ;
+    S.questions = room.questions; S.lastQ = -1;
+    await fbSet(`rooms/${code}/players/${S.myId}`, {name, score:0, isHost:false});
+    document.getElementById('player-wait-name').textContent = name;
+    showScreen('screen-waiting-player');
+    startPolling(`rooms/${S.code}`, onRoomUpdate, 1500);
+  } catch(e){ toast('Error al unirse: ' + e.message); }
+}
+
+function onRoomUpdate(room){
+  if(!room) return;
+  const players = room.players ? Object.entries(room.players).map(([id,p])=>({id,...p})) : [];
+  if(S.isHost){
+    renderWaitingPlayers(players);
+    if(players.length >= 2) document.getElementById('start-btn').style.display='block';
+  } else {
+    renderOtherPlayers(players);
+  }
+  if(room.status === 'playing'){
+    S.questions = room.questions;
+    S.totalQ = room.totalQ;
+    S.totalTime = room.timePerQ;
+    const qIdx = room.currentQ || 0;
+    const enPregunta = document.getElementById('screen-question').classList.contains('active');
+    if(!enPregunta){
+      S.currentQ = qIdx; S.lastQ = qIdx; S.answered = false;
+      showQuestion(players);
+    } else if(!S.isHost && qIdx !== S.lastQ){
+      S.currentQ = qIdx; S.lastQ = qIdx; S.answered = false;
+      clearInterval(S.timer);
+      showQuestion(players);
+    } else {
+      updateMiniScores(players);
+    }
+  }
+  if(room.status === 'finished'){
+    clearInterval(S.timer); stopPolling();
+    showFinal(players.sort((a,b)=>b.score-a.score));
+  }
+}
+
+async function startGame(){
+  S.currentQ = 0; S.lastQ = 0;
+  await fbUpdate(`rooms/${S.code}`, {status:'playing', currentQ:0});
+}
+
+function showQuestion(players){
+  clearInterval(S.timer); S.answered = false;
+  const q = S.questions[S.currentQ];
+  showScreen('screen-question');
+  document.getElementById('q-counter').textContent = `${S.currentQ+1} / ${S.totalQ}`;
+  document.getElementById('q-category').textContent = `🎸 ${q.cat}`;
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('feedback-msg').textContent = '';
+  document.getElementById('feedback-msg').className = 'feedback-msg';
+  document.getElementById('points-earned').style.display = 'none';
+  const correct = q.opts[q.a];
+  const shuffled = [...q.opts].sort(()=>Math.random()-.5);
+  S.correctIdx = shuffled.indexOf(correct);
+  const labels = ['A','B','C','D'];
+  document.getElementById('options-grid').innerHTML = shuffled.map((opt,i)=>`
+    <button class="option-btn" id="opt-${i}" onclick="selectAnswer(${i})">
+      <span style="color:var(--orange);margin-right:4px;">${labels[i]}.</span>${opt}
+    </button>`).join('');
+  S.timeLeft = S.totalTime;
+  document.getElementById('q-timer').textContent = S.timeLeft;
+  document.getElementById('q-timer').classList.remove('urgent');
+  document.getElementById('progress-fill').style.cssText = 'width:100%;transition:none;';
+  setTimeout(()=>{ document.getElementById('progress-fill').style.cssText = `width:0%;transition:width ${S.totalTime}s linear;`; }, 50);
+  if(players) updateMiniScores(players);
+  S.timer = setInterval(()=>{
+    S.timeLeft--;
+    document.getElementById('q-timer').textContent = S.timeLeft;
+    if(S.timeLeft <= 5) document.getElementById('q-timer').classList.add('urgent');
+    if(S.timeLeft <= 0){ clearInterval(S.timer); if(!S.answered) timeUp(); }
+  }, 1000);
+}
+
+async function selectAnswer(idx){
+  if(S.answered) return;
+  S.answered = true; clearInterval(S.timer);
+  const q = S.questions[S.currentQ];
+  const ok = idx === S.correctIdx;
+  const tb = Math.floor(S.timeLeft/S.totalTime*50);
+  const pts = ok ? ((q.diff==='easy'?100:q.diff==='medium'?150:200)+tb) : 0;
+  document.querySelectorAll('.option-btn').forEach((btn,i)=>{
+    btn.classList.add('disabled');
+    if(i===S.correctIdx) btn.classList.add('correct');
+    else if(i===idx && !ok) btn.classList.add('wrong');
+  });
+  const fb = document.getElementById('feedback-msg');
+  fb.textContent = ok ? '🤘 ¡CORRECTO!' : '💀 INCORRECTO';
+  fb.className = 'feedback-msg ' + (ok?'correct':'wrong');
+  if(pts > 0){ const pe = document.getElementById('points-earned'); pe.textContent = `+${pts} pts`; pe.style.display = 'block'; }
+  try {
+    const prev = await fbGet(`rooms/${S.code}/players/${S.myId}/score`);
+    await fbSet(`rooms/${S.code}/players/${S.myId}/score`, (prev||0) + pts);
+  } catch(e){}
+  if(S.isHost){
+    setTimeout(async()=>{
+      const next = S.currentQ + 1;
+      if(next >= S.totalQ){ await fbUpdate(`rooms/${S.code}`, {status:'finished'}); }
+      else { S.currentQ = next; S.lastQ = next; await fbUpdate(`rooms/${S.code}`, {currentQ:next}); }
+    }, 3000);
+  }
+}
+
+function timeUp(){
+  S.answered = true;
+  document.querySelectorAll('.option-btn').forEach((btn,i)=>{ btn.classList.add('disabled'); if(i===S.correctIdx) btn.classList.add('correct'); });
+  document.getElementById('feedback-msg').textContent = '⏱ ¡TIEMPO!';
+  document.getElementById('feedback-msg').className = 'feedback-msg wrong';
+  if(S.isHost){
+    setTimeout(async()=>{
+      const next = S.currentQ + 1;
+      if(next >= S.totalQ){ await fbUpdate(`rooms/${S.code}`, {status:'finished'}); }
+      else { S.currentQ = next; S.lastQ = next; await fbUpdate(`rooms/${S.code}`, {currentQ:next}); }
+    }, 2500);
+  }
+}
+
+function renderWaitingPlayers(list){
+  document.getElementById('players-list-items').innerHTML = list.map(p=>`
+    <div class="player-item"><div class="player-dot"></div><div class="player-name">${p.name}</div>${p.isHost?'<div class="host-badge">ANFITRIÓN</div>':''}</div>`).join('');
+  document.getElementById('player-count').textContent = list.length;
+  document.getElementById('waiting-msg').textContent = list.length===1 ? 'Esperando más jugadores...' : `${list.length} jugadores listos`;
+}
+function renderOtherPlayers(list){
+  document.getElementById('other-players-list').innerHTML = list.map(p=>`
+    <div class="player-item"><div class="player-dot"></div><div class="player-name">${p.name}</div>${p.isHost?'<div class="host-badge">ANFITRIÓN</div>':''}</div>`).join('');
+}
+function updateMiniScores(list){
+  const sorted = [...list].sort((a,b)=>b.score-a.score);
+  document.getElementById('mini-scores').innerHTML = sorted.map(p=>
+    `<div class="mini-score-chip"><span class="chip-name">${p.name}</span><span class="chip-pts">${p.score}</span></div>`).join('');
+}
+
+function showFinal(sorted){
+  showScreen('screen-final');
+  const mx = sorted[0]?.score || 1;
+  document.getElementById('winner-name').textContent = `¡GANÓ ${sorted[0]?.name?.toUpperCase()}!`;
+  document.getElementById('final-scoreboard').innerHTML = sorted.map((p,i)=>`
+    <div class="score-row rank-${i+1}" style="animation-delay:${i*.1}s;">
+      <div class="rank-num">${i+1}</div>
+      <div class="score-name">${p.name}</div>
+      <div class="score-pts">${p.score} pts</div>
+      <div class="score-bar" style="width:${(p.score/mx)*100}%;"></div>
+    </div>`).join('');
+}
+
+async function cancelRoom(){
+  stopPolling(); clearInterval(S.timer);
+  if(S.code) try { await fbDelete(`rooms/${S.code}`); } catch(e){}
+  resetGame();
+}
+function resetGame(){
+  stopPolling(); clearInterval(S.timer);
+  Object.assign(S,{code:null,myId:null,myName:null,isHost:false,questions:[],currentQ:0,totalQ:10,totalTime:20,timeLeft:20,answered:false,correctIdx:0,lastQ:-1});
+  showScreen('screen-home');
+}
+</script>
+</body>
+</html>
