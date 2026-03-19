@@ -87,10 +87,23 @@
 
 <!-- HOME -->
 <div id="screen-home" class="screen active">
-  <div style="margin-top:28px;font-size:3rem;">🎸</div>
-  <div class="home-title">TRIVIA</div>
-  <div style="font-family:'Black Ops One',cursive;font-size:1.1rem;color:var(--orange);letter-spacing:3px;margin-bottom:4px;">ZEPPELIN BAR</div>
-  <div class="home-sub">🎵 Música · Multijugador Real</div>
+  <div style="margin-top:20px;">
+    <svg width="180" height="180" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 18px rgba(255,106,0,0.5));">
+      <rect width="500" height="500" fill="#000"/>
+      <!-- Marco con flecha -->
+      <polyline points="60,60 60,400 340,400" fill="none" stroke="#ff6a00" stroke-width="10" stroke-linejoin="round"/>
+      <line x1="60" y1="60" x2="400" y2="60" stroke="#ff6a00" stroke-width="10"/>
+      <!-- Lado derecho con flecha hacia abajo -->
+      <line x1="400" y1="60" x2="400" y2="420" stroke="#ff6a00" stroke-width="10"/>
+      <polygon points="400,455 382,418 418,418" fill="#ff6a00"/>
+      <!-- Z grande -->
+      <text x="75" y="370" font-family="Arial Black,Impact,sans-serif" font-size="310" font-weight="900" fill="#ff6a00" letter-spacing="-10">Z</text>
+      <!-- ZEPPELIN Bar -->
+      <text x="155" y="475" font-family="Arial Black,Impact,sans-serif" font-size="52" font-weight="900" fill="#ff6a00" letter-spacing="2">ZEPPELIN</text>
+      <text x="390" y="475" font-family="Arial,sans-serif" font-size="38" fill="#ff6a00"> Bar</text>
+    </svg>
+  </div>
+  <div class="home-sub" style="margin-top:6px;">🎵 Música · Multijugador Real</div>
   <div class="divider"></div>
   <div style="font-family:'Bebas Neue',cursive;font-size:.8rem;letter-spacing:3px;color:var(--correct);margin-bottom:20px;"><span class="status-dot"></span>ONLINE</div>
   <button class="btn btn-primary" id="btn-crear">🎤 CREAR SALA</button>
