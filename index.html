@@ -455,7 +455,7 @@ function showQuestion(players){
     S.timeLeft--;
     document.getElementById('q-timer').textContent = S.timeLeft;
     if(S.timeLeft <= 5) document.getElementById('q-timer').classList.add('urgent');
-    if(S.timeLeft <= 0){ clearInterval(S.timer); if(!S.answered) timeUp(); }
+    if(S.timeLeft <= 0){ clearInterval(S.timer); timeUp(); }
   }, 1000);
 }
 
@@ -466,40 +466,50 @@ async function selectAnswer(idx){
   const ok = idx === S.correctIdx;
   const tb = Math.floor(S.timeLeft/S.totalTime*50);
   const pts = ok ? ((q.diff==='easy'?100:q.diff==='medium'?150:200)+tb) : 0;
+  showFeedback(idx, ok, pts);
+  try {
+    const prev = await fbGet(`rooms/${S.code}/players/${S.myId}/score`);
+    await fbSet(`rooms/${S.code}/players/${S.myId}/score`, (prev||0) + pts);
+  } catch(e){}
+  // Marcar que este jugador respondió
+  try { await fbSet(`rooms/${S.code}/answers/${S.currentQ}/${S.myId}`, true); } catch(e){}
+  // Solo el host controla el avance — espera fija de 3s
+  if(S.isHost) scheduleNext(3000);
+}
+
+function timeUp(){
+  if(S.answered) return;
+  S.answered = true;
+  showFeedback(-1, false, 0);
+  if(S.isHost) scheduleNext(2500);
+}
+
+function showFeedback(idx, ok, pts){
   document.querySelectorAll('.option-btn').forEach((btn,i)=>{
     btn.classList.add('disabled');
     if(i===S.correctIdx) btn.classList.add('correct');
     else if(i===idx && !ok) btn.classList.add('wrong');
   });
   const fb = document.getElementById('feedback-msg');
-  fb.textContent = ok ? '🤘 ¡CORRECTO!' : '💀 INCORRECTO';
+  fb.textContent = idx===-1 ? '⏱ ¡TIEMPO!' : ok ? '🤘 ¡CORRECTO!' : '💀 INCORRECTO';
   fb.className = 'feedback-msg ' + (ok?'correct':'wrong');
-  if(pts > 0){ const pe = document.getElementById('points-earned'); pe.textContent = `+${pts} pts`; pe.style.display = 'block'; }
-  try {
-    const prev = await fbGet(`rooms/${S.code}/players/${S.myId}/score`);
-    await fbSet(`rooms/${S.code}/players/${S.myId}/score`, (prev||0) + pts);
-  } catch(e){}
-  if(S.isHost){
-    setTimeout(async()=>{
-      const next = S.currentQ + 1;
-      if(next >= S.totalQ){ await fbUpdate(`rooms/${S.code}`, {status:'finished'}); }
-      else { S.currentQ = next; S.lastQ = next; await fbUpdate(`rooms/${S.code}`, {currentQ:next}); }
-    }, 3000);
-  }
+  if(pts > 0){ const pe=document.getElementById('points-earned'); pe.textContent=`+${pts} pts`; pe.style.display='block'; }
 }
 
-function timeUp(){
-  S.answered = true;
-  document.querySelectorAll('.option-btn').forEach((btn,i)=>{ btn.classList.add('disabled'); if(i===S.correctIdx) btn.classList.add('correct'); });
-  document.getElementById('feedback-msg').textContent = '⏱ ¡TIEMPO!';
-  document.getElementById('feedback-msg').className = 'feedback-msg wrong';
-  if(S.isHost){
-    setTimeout(async()=>{
-      const next = S.currentQ + 1;
-      if(next >= S.totalQ){ await fbUpdate(`rooms/${S.code}`, {status:'finished'}); }
-      else { S.currentQ = next; S.lastQ = next; await fbUpdate(`rooms/${S.code}`, {currentQ:next}); }
-    }, 2500);
-  }
+// Solo el host llama a esto — escribe en Firebase y todos lo detectan via polling
+async function scheduleNext(delay){
+  setTimeout(async()=>{
+    const next = S.currentQ + 1;
+    try {
+      if(next >= S.totalQ){
+        await fbUpdate(`rooms/${S.code}`, {status:'finished'});
+      } else {
+        S.currentQ = next;
+        S.lastQ = next;
+        await fbUpdate(`rooms/${S.code}`, {currentQ: next});
+      }
+    } catch(e){ toast('Error avanzando pregunta'); }
+  }, delay);
 }
 
 function renderWaitingPlayers(list){
